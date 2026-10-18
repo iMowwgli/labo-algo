@@ -1,0 +1,658 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+</head>
+<body>
+<title>Suppression B-arbre pas à pas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&display=swap">
+<style>
+/* Layout: one working column, tree on a gridded "copie d'exam" board, step panel beside it on wide screens. */
+:root{
+  --bg:#F3F5F8; --surface:#FFFFFF; --ink:#16202C; --muted:#5B6878; --line:#D5DCE5; --grid:#E6EBF1;
+  --accent:#2457D6;
+  --focus:#2457D6; --focus-bg:#E3EBFF;
+  --target:#B76E00; --target-bg:#FFF1D6;
+  --sibling:#127A4B; --sibling-bg:#DDF5E8;
+  --changed:#7A3FC2; --changed-bg:#EFE4FF;
+  --path:#8FA7D9;
+  --ok:#127A4B; --bad:#C0392B;
+  --node:#FFFFFF; --node-ink:#16202C;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0F151D; --surface:#17202B; --ink:#E6ECF3; --muted:#9AA8B8; --line:#2C3A4A; --grid:#1C2733;
+  --accent:#7EA2FF;
+  --focus:#7EA2FF; --focus-bg:#1D2C52;
+  --target:#F2B04A; --target-bg:#3D2C0E;
+  --sibling:#4FD08F; --sibling-bg:#123826;
+  --changed:#C39BFF; --changed-bg:#2F1E4D;
+  --path:#4D6699;
+  --ok:#4FD08F; --bad:#FF7A6B;
+  --node:#1E2935; --node-ink:#E6ECF3;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0F151D; --surface:#17202B; --ink:#E6ECF3; --muted:#9AA8B8; --line:#2C3A4A; --grid:#1C2733;
+  --accent:#7EA2FF;
+  --focus:#7EA2FF; --focus-bg:#1D2C52;
+  --target:#F2B04A; --target-bg:#3D2C0E;
+  --sibling:#4FD08F; --sibling-bg:#123826;
+  --changed:#C39BFF; --changed-bg:#2F1E4D;
+  --path:#4D6699;
+  --ok:#4FD08F; --bad:#FF7A6B;
+  --node:#1E2935; --node-ink:#E6ECF3;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:20px 40px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+header h1{font-family:var(--f-display);font-weight:800;font-size:clamp(26px,4vw,38px);line-height:1.1;margin:0;letter-spacing:-.01em;text-wrap:balance}
+header p{margin:6px 0 0;color:var(--muted);max-width:70ch}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px}
+.controls{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+select,input[type=text],input[type=number],textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 9px}
+input[type=number]{width:90px;font-family:var(--f-mono)}
+textarea{font-family:var(--f-mono);font-size:12.5px;width:100%;resize:vertical;min-height:40px}
+button{font:inherit;cursor:pointer;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:7px 12px}
+button:hover{border-color:var(--accent)}
+button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--surface);font-weight:600}
+button:disabled{opacity:.45;cursor:not-allowed}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg button{border:0;border-radius:0;padding:7px 12px;background:transparent}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--surface);font-weight:600}
+.toggle{display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;user-select:none}
+.toggle input{width:16px;height:16px;accent-color:var(--accent)}
+details summary{cursor:pointer;color:var(--muted);font-size:13px}
+details[open] summary{margin-bottom:8px}
+.err{color:var(--bad);font-size:13px;min-height:1em}
+
+.main{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:18px;align-items:start}
+@media (max-width:900px){.main{grid-template-columns:minmax(0,1fr)}}
+.board{background-color:var(--surface);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:20px 20px;border:1px solid var(--line);border-radius:10px;overflow-x:auto;min-width:0}
+.board svg{display:block;margin:0 auto}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--muted);padding:10px 14px;border-top:1px solid var(--line);background:var(--surface)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:14px;height:14px;border-radius:3px;border:2px solid}
+
+.step{display:flex;flex-direction:column;gap:12px;min-width:0}
+.stephead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.counter{font-family:var(--f-mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.badge{display:inline-block;font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:999px;border:1px solid currentColor}
+.b-descendre{color:var(--focus)} .b-rotation-droite,.b-rotation-gauche{color:var(--sibling)}
+.b-fusion{color:var(--target)} .b-supprimer{color:var(--bad)} .b-predecesseur,.b-successeur{color:var(--changed)}
+.b-racine{color:var(--changed)} .b-info{color:var(--muted)}
+.step h2{font-family:var(--f-display);font-weight:600;font-size:21px;line-height:1.2;margin:0;text-wrap:balance}
+.step .txt{margin:0;max-width:62ch}
+.step .txt b{font-family:var(--f-mono);font-weight:600}
+.nav{display:flex;gap:8px}
+.nav button{flex:1}
+.undertree{align-items:center;margin:10px 0}
+.undertree button{padding:11px 12px;font-size:16px}
+.undertree .counter{flex:0 0 auto;padding:0 4px}
+.quiz{display:flex;flex-direction:column;gap:8px;border:1px dashed var(--accent);border-radius:8px;padding:10px}
+.quiz p{margin:0;font-weight:600}
+.choices{display:flex;flex-wrap:wrap;gap:6px}
+.choices button{font-size:13.5px;padding:6px 10px}
+.choices button.right{border-color:var(--ok);color:var(--ok);font-weight:600}
+.choices button.wrong{border-color:var(--bad);color:var(--bad);text-decoration:line-through}
+.verdict{font-size:14px;font-weight:600}
+.verdict.ok{color:var(--ok)} .verdict.ko{color:var(--bad)}
+.score{font-family:var(--f-mono);font-size:13px;color:var(--muted)}
+
+.timeline{display:flex;flex-wrap:wrap;gap:6px}
+.timeline button{font-family:var(--f-mono);font-size:12px;padding:4px 8px;font-variant-numeric:tabular-nums}
+.timeline button[aria-current="step"]{background:var(--accent);color:var(--surface);border-color:var(--accent)}
+
+.checks{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:4px;font-size:14px}
+.checks li::before{content:"✓ ";color:var(--ok);font-weight:700}
+.checks li.ko::before{content:"✗ ";color:var(--bad)}
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.rules h3{font-family:var(--f-display);font-weight:600;font-size:17px;margin:0 0 6px}
+.rules ol{margin:0;padding-left:20px;font-size:14px}
+.rules li{margin:2px 0}
+.guide{margin-top:18px;display:flex;flex-direction:column;gap:10px}
+.guide h3{font-family:var(--f-display);font-weight:600;font-size:19px;margin:0}
+.guide .lead{margin:0;color:var(--muted);font-size:14px;max-width:70ch}
+.mnemo{font-family:var(--f-display);font-weight:800;font-size:18px;margin:0}
+.mnemo .r{color:var(--sibling)} .mnemo .f{color:var(--target)}
+.branches{display:flex;flex-direction:column;gap:6px}
+.br{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center;border:1px solid var(--line);border-left:4px solid var(--line);border-radius:6px;padding:8px 10px;background:var(--surface);transition:background .2s,border-color .2s}
+.br .cond{font-size:14px}
+.br .act{font-weight:600;font-size:13.5px;white-space:nowrap}
+.br .why{grid-column:1/-1;font-size:13px;color:var(--muted)}
+.br.rot .act{color:var(--sibling)} .br.fus .act{color:var(--target)} .br.int .act{color:var(--changed)}
+.br.active{border-color:var(--accent);border-left-color:var(--accent);background:var(--focus-bg)}
+.br.active .cond::before{content:"▶ ";color:var(--accent)}
+.sub{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:4px 0 0}
+@media (max-width:520px){.br{grid-template-columns:minmax(0,1fr)}.br .act{white-space:normal}}
+@media (prefers-reduced-motion:no-preference){ .board svg{animation:fade .25s ease} @keyframes fade{from{opacity:.4}to{opacity:1}} }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Suppression dans un B-arbre, pas à pas</h1>
+    <p>Choisis un arbre, une clé à supprimer et la méthode. Avance étape par étape avec les flèches. En mode entraînement, tu dois choisir l'action avant de voir la réponse, comme à l'exam.</p>
+  </header>
+
+  <section class="panel controls" aria-label="Réglages">
+    <div class="field">
+      <label for="preset">Arbre</label>
+      <select id="preset"></select>
+    </div>
+    <div class="field">
+      <label for="key">Clé à supprimer</label>
+      <input id="key" type="number" value="20">
+    </div>
+    <div class="field">
+      <label>Méthode</label>
+      <div class="seg" role="group" aria-label="Méthode">
+        <button id="m-desc" aria-pressed="true">À la descente</button>
+        <button id="m-rem" aria-pressed="false">À la remontée</button>
+      </div>
+    </div>
+    <button class="primary" id="run">Supprimer</button>
+    <label class="toggle"><input type="checkbox" id="train"> Mode entraînement</label>
+    <div class="field" style="flex:1 1 100%">
+      <details id="custom">
+        <summary>Arbre perso (représentation linéaire du TD)</summary>
+        <div class="controls">
+          <div class="field" style="flex:1 1 420px">
+            <label for="lin">Représentation linéaire</label>
+            <textarea id="lin" rows="2" spellcheck="false"></textarea>
+          </div>
+          <div class="field">
+            <label for="deg">Degré t</label>
+            <select id="deg"><option value="2">2 (1 à 3 clés)</option><option value="3">3 (2 à 5 clés)</option></select>
+          </div>
+          <button id="load">Charger</button>
+        </div>
+      </details>
+      <div class="err" id="err" role="alert"></div>
+    </div>
+  </section>
+
+  <div class="main">
+    <div class="board-wrap" style="min-width:0">
+      <div class="board" id="board" aria-label="Arbre"></div>
+      <div class="nav undertree">
+        <button id="prev" aria-label="Étape précédente">◀ Précédent</button>
+        <span class="counter" id="counter2"></span>
+        <button id="next" class="primary" aria-label="Étape suivante">Suivant ▶</button>
+      </div>
+      <div class="legend">
+        <span><i class="sw" style="border-color:var(--focus);background:var(--focus-bg)"></i>nœud examiné</span>
+        <span><i class="sw" style="border-color:var(--target);background:var(--target-bg)"></i>fils où l'on veut descendre</span>
+        <span><i class="sw" style="border-color:var(--sibling);background:var(--sibling-bg)"></i>frère utilisé</span>
+        <span><i class="sw" style="border-color:var(--changed);background:var(--changed-bg)"></i>nœud modifié</span>
+        <span><i class="sw" style="border-color:var(--path);background:transparent;border-style:dashed"></i>chemin parcouru</span>
+      </div>
+
+      <section class="panel guide" aria-label="Rotation ou fusion">
+        <h3>Rotation ou fusion ?</h3>
+        <p class="mnemo"><span class="r">Frère riche → rotation</span> · <span class="f">frères pauvres → fusion</span></p>
+        <p class="lead">On se pose la question quand un nœud est « pauvre » : à la descente, le fils où l'on veut entrer n'a que le minimum (t−1 clés) ; à la remontée, un nœud est passé sous le minimum. Riche = au moins t clés (2 en degré 2). On ne regarde que les frères directs, sous le même père. La ligne de l'étape en cours s'allume.</p>
+        <p class="sub">Le nœud est pauvre</p>
+        <div class="branches">
+          <div class="br rot" data-a="rotation-droite"><span class="cond">1. Le frère gauche est riche ?</span><span class="act">Rotation droite</span><span class="why">La clé du père descend dans le nœud pauvre, la plus grande clé du frère gauche monte dans le père. Le père garde son nombre de clés.</span></div>
+          <div class="br rot" data-a="rotation-gauche"><span class="cond">2. Sinon, le frère droit est riche ?</span><span class="act">Rotation gauche</span><span class="why">Miroir : la clé du père descend, la plus petite clé du frère droit monte.</span></div>
+          <div class="br fus" data-a="fusion"><span class="cond">3. Sinon, tous les frères sont pauvres</span><span class="act">Fusion</span><span class="why">Nœud + clé du père qui les sépare + frère = un seul nœud. Le père perd une clé ; racine vide → le nœud fusionné devient la racine.</span></div>
+        </div>
+        <p class="sub">x est dans un nœud interne</p>
+        <div class="branches">
+          <div class="br int" data-a="predecesseur"><span class="cond">Le fils gauche de x est riche ?</span><span class="act">Prédécesseur</span><span class="why">x est remplacé par la plus grande clé du sous-arbre gauche, qu'on va supprimer plus bas.</span></div>
+          <div class="br int" data-a="successeur"><span class="cond">Sinon, le fils droit est riche ?</span><span class="act">Successeur</span><span class="why">x est remplacé par la plus petite clé du sous-arbre droit.</span></div>
+          <div class="br fus" data-a="fusion-int"><span class="cond">Sinon, les deux fils sont pauvres</span><span class="act">Fusion</span><span class="why">Les deux fils fusionnent avec x, puis on continue la suppression dans le nœud fusionné.</span></div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="panel step" aria-live="polite">
+      <div class="stephead">
+        <span class="badge" id="badge">Départ</span>
+        <span class="counter" id="counter">1 / 1</span>
+      </div>
+      <h2 id="title"></h2>
+      <div id="quiz"></div>
+      <p class="txt" id="txt"></p>
+      <div id="final"></div>
+      <div class="timeline" id="timeline" aria-label="Étapes"></div>
+      <div class="score" id="score"></div>
+      <button id="keep">Garder cet arbre et supprimer une autre clé</button>
+    </aside>
+  </div>
+
+  <section class="panel rules" aria-label="Rappel des règles">
+    <div>
+      <h3>À la descente (précaution)</h3>
+      <ol>
+        <li>Avant d'entrer dans un fils qui n'a que <b>t−1</b> clés, on lui en donne une.</li>
+        <li>Frère gauche avec au moins t clés : <b>rotation droite</b>.</li>
+        <li>Sinon, frère droit avec au moins t clés : <b>rotation gauche</b>.</li>
+        <li>Sinon : <b>fusion</b> avec un frère et la clé du père qui les sépare.</li>
+        <li>x dans un nœud interne : on le remplace par son <b>prédécesseur</b> (ou successeur) si le fils a assez de clés, sinon on fusionne.</li>
+        <li>Racine vide après une fusion : le nœud fusionné devient la racine.</li>
+      </ol>
+    </div>
+    <div>
+      <h3>À la remontée</h3>
+      <ol>
+        <li>On descend jusqu'à x <b>sans rien modifier</b>.</li>
+        <li>x dans un nœud interne : on le remplace par son <b>prédécesseur</b>, qui est dans une feuille.</li>
+        <li>On supprime dans la feuille.</li>
+        <li>Si un nœud passe sous t−1 clés, on le répare depuis son père : rotation droite, sinon rotation gauche, sinon fusion.</li>
+        <li>Une fusion retire une clé au père : on recommence plus haut si besoin.</li>
+        <li>Racine vide : son unique fils devient la racine.</li>
+      </ol>
+    </div>
+  </section>
+</div>
+
+<script>
+// ===================== ALGO START =====================
+let UID = 0;
+function mk(keys, children) { return { id: ++UID, keys: keys, children: children || [] }; }
+function clone(n) { return { id: n.id, keys: n.keys.slice(), children: n.children.map(clone) }; }
+function fmt(n) { return "[" + (n.keys.length ? n.keys.join("|") : "∅") + "]"; }
+function pos(keys, x) { let i = 0; while (i < keys.length && keys[i] < x) i++; return i; }
+
+function parseLinear(s) {
+  s = s.replace(/\s+/g, "");
+  let i = 0;
+  function node() {
+    if (s[i] !== "(" || s[i + 1] !== "<") throw new Error("attendu « (< » à la position " + i);
+    i += 2;
+    const keys = []; let cur = "";
+    while (s[i] !== ">") {
+      if (i >= s.length) throw new Error("« > » manquant");
+      if (s[i] === ",") { if (cur === "") throw new Error("clé vide"); keys.push(Number(cur)); cur = ""; }
+      else cur += s[i];
+      i++;
+    }
+    if (cur !== "") keys.push(Number(cur));
+    if (keys.some(k => Number.isNaN(k))) throw new Error("clé non numérique");
+    i++;
+    const ch = [];
+    while (s[i] === "(") ch.push(node());
+    if (s[i] !== ")") throw new Error("« ) » manquante à la position " + i);
+    i++;
+    return mk(keys, ch);
+  }
+  const r = node();
+  if (i !== s.length) throw new Error("caractères en trop après l'arbre");
+  return r;
+}
+
+function rightRot(B, i) { const L = B.children[i - 1], R = B.children[i];
+  R.keys.unshift(B.keys[i - 1]); B.keys[i - 1] = L.keys.pop();
+  if (L.children.length) R.children.unshift(L.children.pop()); }
+function leftRot(B, i) { const L = B.children[i], R = B.children[i + 1];
+  L.keys.push(B.keys[i]); B.keys[i] = R.keys.shift();
+  if (R.children.length) L.children.push(R.children.shift()); }
+function merge(B, i) { const L = B.children[i]; const R = B.children.splice(i + 1, 1)[0];
+  L.keys.push(B.keys.splice(i, 1)[0]); L.keys.push(...R.keys); L.children.push(...R.children); }
+
+function checks(root, t) {
+  const out = []; const keys = []; const depths = new Set(); let sizeOk = true;
+  (function walk(n, d, isRoot) {
+    const lo = isRoot ? 1 : t - 1, hi = 2 * t - 1;
+    if (n.keys.length < lo || n.keys.length > hi) sizeOk = false;
+    if (!n.children.length) { depths.add(d); keys.push(...n.keys); return; }
+    if (n.children.length !== n.keys.length + 1) sizeOk = false;
+    n.children.forEach((c, j) => { walk(c, d + 1, false); if (j < n.keys.length) keys.push(n.keys[j]); });
+  })(root, 0, true);
+  let sorted = true; for (let k = 1; k < keys.length; k++) if (keys[k - 1] >= keys[k]) sorted = false;
+  out.push({ ok: sorted, label: "Ordre infixe trié : " + keys.join(", ") });
+  out.push({ ok: depths.size <= 1, label: "Toutes les feuilles au même niveau" });
+  out.push({ ok: sizeOk, label: "Chaque nœud a entre " + (t - 1) + " et " + (2 * t - 1) + " clés (racine : au moins 1)" });
+  return out;
+}
+
+function runDescente(root0, x, t) {
+  const H = { root: clone(root0) }; const steps = []; const min = t - 1;
+  const S = o => steps.push(Object.assign({ tree: clone(H.root), hl: {} }, o));
+  S({ kind: "info", action: "info", title: "Départ : supprimer " + x,
+      text: "Méthode « à la descente » : avant d'entrer dans un fils, on vérifie qu'il a au moins <b>" + t + "</b> clés. S'il n'en a que <b>" + min + "</b>, on lui en donne une d'abord.",
+      hl: { focus: H.root.id }, key: x });
+  let B = H.root;
+  for (let guard = 0; guard < 200; guard++) {
+    const i = pos(B.keys, x); const found = i < B.keys.length && B.keys[i] === x;
+    if (!B.children.length) {
+      if (found) {
+        S({ kind: "decision", action: "supprimer", title: "Feuille " + fmt(B),
+            text: "<b>" + x + "</b> est dans cette feuille. Grâce à la précaution, elle a assez de clés (ou c'est la racine) : on supprime directement.",
+            hl: { focus: B.id }, key: x });
+        B.keys.splice(i, 1);
+        S({ kind: "result", action: "supprimer", title: x + " supprimé", text: "La feuille devient <b>" + fmt(B) + "</b>. Aucune réparation n'est nécessaire : tout a été préparé pendant la descente.", hl: { changed: [B.id] } });
+      } else {
+        S({ kind: "info", action: "info", title: x + " absent", text: "<b>" + x + "</b> n'est pas dans l'arbre : on s'arrête. Les modifications faites en descendant restent (c'est le prix de la précaution).", hl: { focus: B.id } });
+      }
+      break;
+    }
+    if (found) {
+      const L = B.children[i], R = B.children[i + 1];
+      if (L.keys.length > min) {
+        let m = L; while (m.children.length) m = m.children[m.children.length - 1];
+        const p = m.keys[m.keys.length - 1];
+        S({ kind: "decision", action: "predecesseur", title: x + " trouvé dans un nœud interne",
+            text: "On ne supprime pas <b>" + x + "</b> ici. Le fils gauche <b>" + fmt(L) + "</b> a au moins " + t + " clés : on remplace " + x + " par son prédécesseur <b>" + p + "</b> (plus grande clé du sous-arbre gauche), puis on va supprimer " + p + " dans ce fils.",
+            hl: { focus: B.id, target: L.id }, key: x });
+        B.keys[i] = p;
+        S({ kind: "result", action: "predecesseur", title: x + " remplacé par " + p, text: "On continue la descente dans <b>" + fmt(L) + "</b> pour supprimer <b>" + p + "</b>.", hl: { changed: [B.id], target: L.id }, key: p });
+        x = p; B = L; continue;
+      }
+      if (R.keys.length > min) {
+        let m = R; while (m.children.length) m = m.children[0];
+        const sc = m.keys[0];
+        S({ kind: "decision", action: "successeur", title: x + " trouvé dans un nœud interne",
+            text: "Le fils gauche <b>" + fmt(L) + "</b> est minimal, mais le fils droit <b>" + fmt(R) + "</b> a au moins " + t + " clés : on remplace " + x + " par son successeur <b>" + sc + "</b> (plus petite clé du sous-arbre droit).",
+            hl: { focus: B.id, target: R.id, sibling: L.id }, key: x });
+        B.keys[i] = sc;
+        S({ kind: "result", action: "successeur", title: x + " remplacé par " + sc, text: "On continue dans <b>" + fmt(R) + "</b> pour supprimer <b>" + sc + "</b>.", hl: { changed: [B.id], target: R.id }, key: sc });
+        x = sc; B = R; continue;
+      }
+      S({ kind: "decision", action: "fusion", title: x + " trouvé, deux fils minimaux",
+          text: "Les deux fils autour de <b>" + x + "</b> (" + fmt(L) + " et " + fmt(R) + ") n'ont que " + min + " clé(s) : on les fusionne, et " + x + " descend dans le nœud fusionné.",
+          hl: { focus: B.id, target: L.id, sibling: R.id }, key: x });
+      merge(B, i); let note = "";
+      if (B === H.root && B.keys.length === 0) { H.root = L; note = " La racine est vide : le nœud fusionné devient la <b>nouvelle racine</b>, la hauteur baisse de 1."; }
+      S({ kind: "result", action: "fusion", title: "Fusion : " + fmt(L), text: "Nœud fusionné : <b>" + fmt(L) + "</b>." + note + " On continue dedans.", hl: { changed: [L.id] }, key: x });
+      B = L; continue;
+    }
+    const C = B.children[i];
+    if (C.keys.length > min) {
+      S({ kind: "decision", action: "descendre", title: "Descendre dans " + fmt(C),
+          text: "<b>" + x + "</b> n'est pas dans " + fmt(B) + ", il faut aller dans le fils <b>" + fmt(C) + "</b>. Il a " + C.keys.length + " clés, plus que le minimum : rien à faire, on descend.",
+          hl: { focus: B.id, target: C.id }, key: x });
+      B = C; continue;
+    }
+    const LS = i > 0 ? B.children[i - 1] : null, RS = i < B.keys.length ? B.children[i + 1] : null;
+    const why = "<b>" + x + "</b> n'est pas dans " + fmt(B) + ", il faut descendre dans <b>" + fmt(C) + "</b>, qui n'a que " + min + " clé(s). Avant d'y entrer, on lui en donne une. ";
+    if (LS && LS.keys.length > min) {
+      const down = B.keys[i - 1], up = LS.keys[LS.keys.length - 1];
+      S({ kind: "decision", action: "rotation-droite", title: "Fils minimal " + fmt(C),
+          text: why + "Son frère gauche <b>" + fmt(LS) + "</b> a " + LS.keys.length + " clés : <b>rotation droite</b>. " + down + " descend dans le fils, " + up + " monte dans le père.",
+          hl: { focus: B.id, target: C.id, sibling: LS.id }, key: x });
+      rightRot(B, i);
+      S({ kind: "result", action: "rotation-droite", title: "Rotation droite faite", text: "Le fils devient <b>" + fmt(C) + "</b>, le père <b>" + fmt(B) + "</b>, le frère <b>" + fmt(LS) + "</b>. On descend dans " + fmt(C) + ".", hl: { changed: [B.id, C.id, LS.id] }, key: x });
+      B = C; continue;
+    }
+    if (RS && RS.keys.length > min) {
+      const down = B.keys[i], up = RS.keys[0];
+      S({ kind: "decision", action: "rotation-gauche", title: "Fils minimal " + fmt(C),
+          text: why + (LS ? "Le frère gauche " + fmt(LS) + " est minimal, mais" : "Il n'a pas de frère gauche, mais") + " son frère droit <b>" + fmt(RS) + "</b> a " + RS.keys.length + " clés : <b>rotation gauche</b>. " + down + " descend dans le fils, " + up + " monte dans le père.",
+          hl: { focus: B.id, target: C.id, sibling: RS.id }, key: x });
+      leftRot(B, i);
+      S({ kind: "result", action: "rotation-gauche", title: "Rotation gauche faite", text: "Le fils devient <b>" + fmt(C) + "</b>, le père <b>" + fmt(B) + "</b>, le frère <b>" + fmt(RS) + "</b>. On descend dans " + fmt(C) + ".", hl: { changed: [B.id, C.id, RS.id] }, key: x });
+      B = C; continue;
+    }
+    const j = RS ? i : i - 1; const other = RS || LS; const sep = B.keys[j];
+    S({ kind: "decision", action: "fusion", title: "Fils minimal " + fmt(C),
+        text: why + "Ses frères sont minimaux aussi : <b>fusion</b> avec le frère " + (RS ? "droit" : "gauche") + " <b>" + fmt(other) + "</b> et la clé <b>" + sep + "</b> du père qui les sépare.",
+        hl: { focus: B.id, target: C.id, sibling: other.id }, key: x });
+    merge(B, j); const M = B.children[j]; let note = "";
+    if (B === H.root && B.keys.length === 0) { H.root = M; note = " La racine est vide : le nœud fusionné devient la <b>nouvelle racine</b>, la hauteur baisse de 1."; }
+    S({ kind: "result", action: "fusion", title: "Fusion : " + fmt(M), text: "Nœud fusionné : <b>" + fmt(M) + "</b>." + note + " On continue dedans.", hl: { changed: [M.id] }, key: x });
+    B = M;
+  }
+  S({ kind: "final", action: "info", title: "Arbre final", text: "Vérifie toujours ces trois points à l'exam :", hl: {} });
+  return { steps: steps, root: H.root };
+}
+
+function runRemontee(root0, x, t) {
+  const H = { root: clone(root0) }; const steps = []; const min = t - 1;
+  const S = o => steps.push(Object.assign({ tree: clone(H.root), hl: {} }, o));
+  S({ kind: "info", action: "info", title: "Départ : supprimer " + x,
+      text: "Méthode « à la remontée » : on descend sans rien modifier, on supprime dans une feuille, puis on répare en remontant si un nœud passe sous <b>" + min + "</b> clé(s).",
+      hl: { focus: H.root.id }, key: x });
+  const path = []; let B = H.root; let i; let found = false;
+  for (;;) { i = pos(B.keys, x); if (i < B.keys.length && B.keys[i] === x) { found = true; break; }
+    if (!B.children.length) break; path.push([B, i]); B = B.children[i]; }
+  const pathIds = path.map(p => p[0].id).concat([B.id]);
+  if (!found) {
+    S({ kind: "info", action: "info", title: x + " absent", text: "On a cherché <b>" + x + "</b> jusqu'à la feuille " + fmt(B) + " : il n'est pas dans l'arbre. Rien n'a été modifié.", hl: { path: pathIds, focus: B.id } });
+    S({ kind: "final", action: "info", title: "Arbre final", text: "L'arbre n'a pas changé.", hl: {} });
+    return { steps: steps, root: H.root };
+  }
+  S({ kind: "info", action: "info", title: "Recherche de " + x,
+      text: "Chemin : " + path.map(p => fmt(p[0])).concat([fmt(B)]).join(" → ") + ". Aucun nœud n'est modifié pendant cette descente.",
+      hl: { path: pathIds, focus: B.id }, key: x });
+  let leaf = B, li = i;
+  if (B.children.length) {
+    path.push([B, i]); let m = B.children[i];
+    while (m.children.length) { path.push([m, m.children.length - 1]); m = m.children[m.children.length - 1]; }
+    const p = m.keys[m.keys.length - 1];
+    S({ kind: "decision", action: "predecesseur", title: x + " est dans un nœud interne",
+        text: "On ne supprime que dans une feuille. On remplace <b>" + x + "</b> par son prédécesseur <b>" + p + "</b> (plus grande clé du sous-arbre gauche) ; c'est " + p + " qu'on supprimera dans la feuille <b>" + fmt(m) + "</b>.",
+        hl: { focus: B.id, target: m.id }, key: x });
+    B.keys[i] = p; leaf = m; li = m.keys.length - 1; x = p;
+    S({ kind: "result", action: "predecesseur", title: "Remplacé par " + p, text: "Le nœud devient <b>" + fmt(B) + "</b>. Il reste à retirer <b>" + p + "</b> de la feuille " + fmt(m) + ".", hl: { changed: [B.id], target: m.id }, key: p });
+  }
+  S({ kind: "decision", action: "supprimer", title: "Feuille " + fmt(leaf), text: "On retire <b>" + x + "</b> de la feuille.", hl: { focus: leaf.id }, key: x });
+  leaf.keys.splice(li, 1);
+  const under = leaf !== H.root && leaf.keys.length < min;
+  S({ kind: "result", action: "supprimer", title: x + " supprimé",
+      text: under ? "La feuille devient <b>" + fmt(leaf) + "</b> : " + leaf.keys.length + " clé, moins que le minimum " + min + ". Il faut réparer." : "La feuille devient <b>" + fmt(leaf) + "</b>, elle a assez de clés : rien à réparer.",
+      hl: { changed: [leaf.id] } });
+  let node = leaf;
+  while (node !== H.root && node.keys.length < min) {
+    const pj = path.pop(); const p = pj[0], j = pj[1];
+    const LS = j > 0 ? p.children[j - 1] : null, RS = j < p.keys.length ? p.children[j + 1] : null;
+    const why = "<b>" + fmt(node) + "</b> n'a que " + node.keys.length + " clé(s) (minimum " + min + "). On répare depuis son père <b>" + fmt(p) + "</b>. ";
+    if (LS && LS.keys.length > min) {
+      const down = p.keys[j - 1], up = LS.keys[LS.keys.length - 1];
+      S({ kind: "decision", action: "rotation-droite", title: "Réparer " + fmt(node), text: why + "Le frère gauche <b>" + fmt(LS) + "</b> a " + LS.keys.length + " clés : <b>rotation droite</b>. " + down + " descend, " + up + " monte.", hl: { focus: p.id, target: node.id, sibling: LS.id } });
+      rightRot(p, j);
+      S({ kind: "result", action: "rotation-droite", title: "Rotation droite faite", text: "Le nœud devient <b>" + fmt(node) + "</b>, le père <b>" + fmt(p) + "</b>. Le père n'a pas perdu de clé : on s'arrête.", hl: { changed: [p.id, node.id, LS.id] } });
+    } else if (RS && RS.keys.length > min) {
+      const down = p.keys[j], up = RS.keys[0];
+      S({ kind: "decision", action: "rotation-gauche", title: "Réparer " + fmt(node), text: why + (LS ? "Le frère gauche " + fmt(LS) + " est minimal, mais le" : "Pas de frère gauche ; le") + " frère droit <b>" + fmt(RS) + "</b> a " + RS.keys.length + " clés : <b>rotation gauche</b>. " + down + " descend, " + up + " monte.", hl: { focus: p.id, target: node.id, sibling: RS.id } });
+      leftRot(p, j);
+      S({ kind: "result", action: "rotation-gauche", title: "Rotation gauche faite", text: "Le nœud devient <b>" + fmt(node) + "</b>, le père <b>" + fmt(p) + "</b>. Le père n'a pas perdu de clé : on s'arrête.", hl: { changed: [p.id, node.id, RS.id] } });
+    } else {
+      const k = RS ? j : j - 1; const other = RS || LS; const sep = p.keys[k];
+      S({ kind: "decision", action: "fusion", title: "Réparer " + fmt(node), text: why + "Les frères sont minimaux : <b>fusion</b> avec le frère " + (RS ? "droit" : "gauche") + " <b>" + fmt(other) + "</b> et la clé <b>" + sep + "</b> du père.", hl: { focus: p.id, target: node.id, sibling: other.id } });
+      merge(p, k); const M = p.children[k];
+      const pUnder = p !== H.root && p.keys.length < min;
+      S({ kind: "result", action: "fusion", title: "Fusion : " + fmt(M),
+          text: "Nœud fusionné : <b>" + fmt(M) + "</b>. Le père perd la clé " + sep + " et devient <b>" + fmt(p) + "</b>" + (pUnder ? " : il passe sous le minimum, on remonte d'un cran." : (p === H.root && p.keys.length === 0 ? " : c'est la racine, elle est vide." : " : il a encore assez de clés, on s'arrête.")),
+          hl: { changed: [M.id, p.id] } });
+      node = p;
+    }
+  }
+  if (H.root.keys.length === 0 && H.root.children.length) {
+    H.root = H.root.children[0];
+    S({ kind: "result", action: "racine", title: "Nouvelle racine", text: "La racine était vide : son unique fils <b>" + fmt(H.root) + "</b> devient la racine. La hauteur baisse de 1.", hl: { changed: [H.root.id] } });
+  }
+  S({ kind: "final", action: "info", title: "Arbre final", text: "Vérifie toujours ces trois points à l'exam :", hl: {} });
+  return { steps: steps, root: H.root };
+}
+// ===================== ALGO END =====================
+
+const PRESETS = [
+  { name: "Exam B5 2025 – B2 (t = 2)", t: 2, key: 20, s: "(<41>(<22>(<14>(<4,12>)(<20>))(<27,37>(<24>)(<30,35>)(<40>)))(<60>(<50>(<45>)(<55>))(<70>(<65>)(<75>))))" },
+  { name: "TD2 – B1 (t = 2)", t: 2, key: 24, s: "(<22>(<15>(<8,12>)(<18,19,20>))(<27,41>(<24,25>)(<30,35,38>)(<45,48>)))" },
+  { name: "TD2 – B2 (t = 2)", t: 2, key: 3, s: "(<13,32,44>(<3>)(<18,25>)(<35,40>)(<46,49,50>))" },
+  { name: "TD2 – B0 (t = 3)", t: 3, key: 42, s: "(<40>(<7,20,35>(<2,5,6>)(<13,14,15,16>)(<22,27,29,30>)(<36,39>))(<72,83>(<42,51>)(<79,81>)(<87,91,93,96,99>)))" },
+  { name: "TD2 – delMin (t = 3)", t: 3, key: 3, s: "(<20>(<8,15>(<3,5>)(<9,13>)(<16,17,18>))(<26,42,53>(<21,25>)(<34,41>)(<43,51,52>)(<62,65,66,77>)))" },
+];
+const CHOICES = [
+  ["descendre", "Descendre sans rien faire"], ["rotation-droite", "Rotation droite"], ["rotation-gauche", "Rotation gauche"],
+  ["fusion", "Fusion"], ["supprimer", "Supprimer dans la feuille"], ["predecesseur", "Remplacer par le prédécesseur"], ["successeur", "Remplacer par le successeur"],
+];
+const LABEL = { info: "Info", descendre: "Descente", "rotation-droite": "Rotation droite", "rotation-gauche": "Rotation gauche", fusion: "Fusion", supprimer: "Suppression", predecesseur: "Prédécesseur", successeur: "Successeur", racine: "Nouvelle racine" };
+
+const $ = id => document.getElementById(id);
+const state = { root: null, t: 2, mode: "desc", steps: [], idx: 0, finalRoot: null, answers: {} };
+
+function loadTree(s, t, key) {
+  try { UID = 0; state.root = parseLinear(s); state.t = t; $("err").textContent = ""; }
+  catch (e) { $("err").textContent = "Représentation invalide : " + e.message + ". Format : (<k1,k2>(fils1)(fils2)…)"; return false; }
+  $("lin").value = s; $("deg").value = String(t); if (key !== undefined) $("key").value = key;
+  return true;
+}
+function run() {
+  const x = Number($("key").value);
+  if (!state.root || Number.isNaN(x)) return;
+  const r = (state.mode === "desc" ? runDescente : runRemontee)(state.root, x, state.t);
+  state.steps = r.steps; state.finalRoot = r.root; state.idx = 0; state.answers = {};
+  render();
+}
+
+// ---------- tree drawing ----------
+const KW = 34, NH = 30, LV = 78, HG = 16, PAD = 24;
+function layout(root) {
+  const W = n => Math.max(1, n.keys.length) * KW;
+  const sw = new Map();
+  (function m(n) { n.children.forEach(m);
+    const cs = n.children.reduce((a, c) => a + sw.get(c.id), 0) + HG * Math.max(0, n.children.length - 1);
+    sw.set(n.id, Math.max(W(n), cs)); })(root);
+  const pos = new Map(); let maxD = 0;
+  (function place(n, left, d) {
+    maxD = Math.max(maxD, d);
+    const w = sw.get(n.id);
+    if (n.children.length) {
+      const cs = n.children.reduce((a, c) => a + sw.get(c.id), 0) + HG * (n.children.length - 1);
+      let x = left + (w - cs) / 2;
+      n.children.forEach(c => { place(c, x, d + 1); x += sw.get(c.id) + HG; });
+      const f = pos.get(n.children[0].id), l = pos.get(n.children[n.children.length - 1].id);
+      pos.set(n.id, { cx: (f.cx + l.cx) / 2, y: d * LV, w: W(n) });
+    } else pos.set(n.id, { cx: left + w / 2, y: d * LV, w: W(n) });
+  })(root, 0, 0);
+  return { pos: pos, width: sw.get(root.id), height: maxD * LV + NH };
+}
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+function drawTree(root, hl, key) {
+  const L = layout(root); const W = L.width + PAD * 2, Hh = L.height + PAD * 2;
+  const path = new Set(hl.path || []), changed = new Set(hl.changed || []);
+  let edges = "", nodes = "";
+  (function walk(n) {
+    const p = L.pos.get(n.id); const left = PAD + p.cx - p.w / 2, top = PAD + p.y;
+    n.children.forEach((c, j) => {
+      const q = L.pos.get(c.id); const x1 = left + j * KW * (Math.max(1, n.keys.length) / Math.max(1, n.keys.length));
+      const sx = left + (n.keys.length ? j * KW : p.w / 2);
+      const onPath = path.has(n.id) && path.has(c.id);
+      edges += '<line x1="' + sx + '" y1="' + (top + NH) + '" x2="' + (PAD + q.cx) + '" y2="' + (PAD + q.y) + '" stroke="' + (onPath ? "var(--path)" : "var(--muted)") + '" stroke-width="' + (onPath ? 3 : 1.3) + '"' + (onPath ? ' stroke-dasharray="6 4"' : "") + "/>";
+      walk(c);
+    });
+    let stroke = "var(--node-ink)", fill = "var(--node)", sw = 1.4;
+    if (changed.has(n.id)) { stroke = "var(--changed)"; fill = "var(--changed-bg)"; sw = 2.6; }
+    if (n.id === hl.sibling) { stroke = "var(--sibling)"; fill = "var(--sibling-bg)"; sw = 2.6; }
+    if (n.id === hl.target) { stroke = "var(--target)"; fill = "var(--target-bg)"; sw = 2.6; }
+    if (n.id === hl.focus) { stroke = "var(--focus)"; fill = "var(--focus-bg)"; sw = 2.6; }
+    if (path.has(n.id) && !(n.id === hl.focus)) { nodes += '<rect x="' + (left - 4) + '" y="' + (top - 4) + '" width="' + (p.w + 8) + '" height="' + (NH + 8) + '" rx="6" fill="none" stroke="var(--path)" stroke-width="2" stroke-dasharray="5 3"/>'; }
+    nodes += '<rect x="' + left + '" y="' + top + '" width="' + p.w + '" height="' + NH + '" rx="4" fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"/>';
+    for (let k = 1; k < n.keys.length; k++) nodes += '<line x1="' + (left + k * KW) + '" y1="' + top + '" x2="' + (left + k * KW) + '" y2="' + (top + NH) + '" stroke="' + stroke + '" stroke-width="1"/>';
+    if (!n.keys.length) nodes += '<text x="' + (left + p.w / 2) + '" y="' + (top + NH / 2 + 5) + '" text-anchor="middle" font-family="var(--f-mono)" font-size="14" fill="var(--bad)">∅</text>';
+    n.keys.forEach((k, j) => {
+      const isKey = key !== undefined && k === key;
+      const cx = left + j * KW + KW / 2;
+      if (isKey) nodes += '<circle cx="' + cx + '" cy="' + (top + NH / 2) + '" r="12.5" fill="none" stroke="var(--bad)" stroke-width="2"/>';
+      nodes += '<text x="' + cx + '" y="' + (top + NH / 2 + 5) + '" text-anchor="middle" font-family="var(--f-mono)" font-size="14" font-weight="' + (isKey ? 700 : 500) + '" fill="' + (isKey ? "var(--bad)" : "var(--node-ink)") + '">' + esc(k) + "</text>";
+    });
+  })(root);
+  return '<svg width="' + W + '" height="' + Hh + '" viewBox="0 0 ' + W + " " + Hh + '" role="img" aria-label="B-arbre">' + edges + nodes + "</svg>";
+}
+
+// ---------- UI ----------
+function render() {
+  const st = state.steps[state.idx]; if (!st) return;
+  $("board").innerHTML = drawTree(st.tree, st.hl, st.key);
+  $("counter").textContent = (state.idx + 1) + " / " + state.steps.length;
+  $("counter2").textContent = $("counter").textContent;
+  const training = $("train").checked && st.kind === "decision";
+  const ans = state.answers[state.idx];
+  const hide = training && !ans;
+  const b = $("badge"); b.textContent = hide ? "À toi" : (st.kind === "final" ? "Fin" : (state.idx === 0 ? "Départ" : LABEL[st.action] || "Info"));
+  b.className = "badge b-" + (hide || st.kind === "final" ? "info" : st.action);
+  $("title").textContent = st.title;
+  const q = $("quiz"); q.innerHTML = "";
+  if (training) {
+    const box = document.createElement("div"); box.className = "quiz";
+    box.innerHTML = "<p>Que fais-tu maintenant ?</p>";
+    const ch = document.createElement("div"); ch.className = "choices";
+    CHOICES.forEach(([v, l]) => {
+      const bt = document.createElement("button"); bt.textContent = l; bt.type = "button";
+      if (ans) { bt.disabled = true; if (v === st.action) bt.className = "right"; else if (v === ans) bt.className = "wrong"; }
+      bt.addEventListener("click", () => { state.answers[state.idx] = v; render(); });
+      ch.appendChild(bt);
+    });
+    box.appendChild(ch);
+    if (ans) { const v = document.createElement("div"); v.className = "verdict " + (ans === st.action ? "ok" : "ko"); v.textContent = ans === st.action ? "Bonne réponse." : "Non : la bonne action est « " + LABEL[st.action] + " »."; box.appendChild(v); }
+    q.appendChild(box);
+  }
+  $("txt").innerHTML = training && !ans ? '<span style="color:var(--muted)">Les nœuds colorés montrent la situation. Choisis l\'action pour voir l\'explication.</span>' : st.text;
+  const f = $("final"); f.innerHTML = "";
+  if (st.kind === "final") {
+    const ul = document.createElement("ul"); ul.className = "checks";
+    checks(st.tree, state.t).forEach(c => { const li = document.createElement("li"); if (!c.ok) li.className = "ko"; li.textContent = c.label; ul.appendChild(li); });
+    f.appendChild(ul);
+  }
+  $("prev").disabled = state.idx === 0;
+  $("next").disabled = state.idx === state.steps.length - 1;
+  $("keep").hidden = st.kind !== "final";
+  const tl = $("timeline"); tl.innerHTML = "";
+  state.steps.forEach((s, k) => {
+    const bt = document.createElement("button"); bt.type = "button";
+    const hidden = $("train").checked && s.kind === "decision" && !state.answers[k];
+    bt.textContent = (k + 1) + (s.kind === "decision" ? " " + (hidden ? "?" : (LABEL[s.action] || "")) : "");
+    if (k === state.idx) bt.setAttribute("aria-current", "step");
+    bt.addEventListener("click", () => { state.idx = k; render(); });
+    tl.appendChild(bt);
+  });
+  let act = hide || st.kind !== "decision" ? "" : st.action;
+  if (act === "fusion" && st.title.indexOf("trouvé") !== -1) act = "fusion-int";
+  document.querySelectorAll(".br").forEach(el => el.classList.toggle("active", el.dataset.a === act));
+  const total = state.steps.filter(s => s.kind === "decision").length;
+  const done = Object.keys(state.answers).length;
+  const good = Object.entries(state.answers).filter(([k, v]) => state.steps[k].action === v).length;
+  $("score").textContent = $("train").checked ? "Score : " + good + " / " + done + " (sur " + total + " décisions)" : "";
+}
+
+function setMode(m) {
+  state.mode = m;
+  $("m-desc").setAttribute("aria-pressed", String(m === "desc"));
+  $("m-rem").setAttribute("aria-pressed", String(m === "rem"));
+  run();
+}
+
+PRESETS.forEach((p, i) => { const o = document.createElement("option"); o.value = i; o.textContent = p.name; $("preset").appendChild(o); });
+$("preset").addEventListener("change", e => { const p = PRESETS[+e.target.value]; if (loadTree(p.s, p.t, p.key)) run(); });
+$("load").addEventListener("click", () => { if (loadTree($("lin").value, +$("deg").value)) run(); });
+$("run").addEventListener("click", run);
+$("key").addEventListener("keydown", e => { if (e.key === "Enter") run(); });
+$("m-desc").addEventListener("click", () => setMode("desc"));
+$("m-rem").addEventListener("click", () => setMode("rem"));
+$("train").addEventListener("change", render);
+$("prev").addEventListener("click", () => { if (state.idx > 0) { state.idx--; render(); } });
+$("next").addEventListener("click", () => { if (state.idx < state.steps.length - 1) { state.idx++; render(); } });
+$("keep").addEventListener("click", () => {
+  state.root = clone(state.finalRoot);
+  $("lin").value = toLinear(state.root);
+  $("key").focus(); $("key").select();
+  state.steps = [{ kind: "info", action: "info", title: "Nouvel arbre de départ", text: "Choisis une autre clé à supprimer, puis appuie sur « Supprimer ».", tree: clone(state.root), hl: {} }];
+  state.idx = 0; state.answers = {}; render();
+});
+document.addEventListener("keydown", e => {
+  if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) return;
+  if (e.key === "ArrowRight") $("next").click();
+  if (e.key === "ArrowLeft") $("prev").click();
+});
+function toLinear(n) { return "(<" + n.keys.join(",") + ">" + n.children.map(toLinear).join("") + ")"; }
+
+loadTree(PRESETS[0].s, PRESETS[0].t, PRESETS[0].key);
+run();
+</script>
+
+</body>
+</html>
