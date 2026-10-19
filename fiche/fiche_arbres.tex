@@ -1,7 +1,7 @@
 \documentclass[10pt,a4paper]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
-\usepackage[margin=1.4cm,top=1.2cm,bottom=1.4cm]{geometry}
+\usepackage[margin=1.3cm,top=1.2cm,bottom=1.4cm]{geometry}
 \usepackage{xcolor}
 \usepackage{listings}
 \usepackage[most]{tcolorbox}
@@ -11,28 +11,34 @@
 \usepackage{array}
 \usepackage{booktabs}
 \usepackage{colortbl}
-\arrayrulecolor{warn}
 \usepackage{fancyhdr}
 \usepackage{amssymb}
 
 % ---------- couleurs ----------
-\definecolor{bfs}{HTML}{9C2C77}
-\definecolor{dfs}{HTML}{E0457B}
-\definecolor{ok}{HTML}{7A1F52}
-\definecolor{warn}{HTML}{D63384}
-\definecolor{codebg}{HTML}{FFF4F8}
+\definecolor{theme}{HTML}{D63384}     % rose du theme (titres)
+\definecolor{themedark}{HTML}{8E1B4F}
 \definecolor{rose}{HTML}{F7A1C4}
 \definecolor{roseclair}{HTML}{FDE7F0}
+\definecolor{treec}{HTML}{7B3FBF}     % classe Tree = violet
+\definecolor{treebg}{HTML}{F5EFFC}
+\definecolor{tabc}{HTML}{E0457B}      % classe TreeAsBin = rose
+\definecolor{tabbg}{HTML}{FFF1F6}
+\definecolor{bfs}{HTML}{0F766E}       % BFS = sarcelle
+\definecolor{dfs}{HTML}{B45309}       % DFS = ambre
+\definecolor{ok}{HTML}{1E7B4F}
+\definecolor{ko}{HTML}{C0392B}
 \definecolor{gris}{HTML}{6B4A5A}
+\definecolor{codebg}{HTML}{FAF7F9}
+\definecolor{kw}{HTML}{8E1B4F}
 
+\arrayrulecolor{theme}
 \pagestyle{fancy}
 \fancyhf{}
 \lhead{\small\color{gris}Algo S3 -- Arbres g\'en\'eraux}
-\rhead{\small\color{gris}Fiche patterns}
+\rhead{\small\textcolor{treec}{\textbf{violet = Tree}} \quad \textcolor{tabc}{\textbf{rose = TreeAsBin}}}
 \cfoot{\small\thepage}
 \renewcommand{\headrulewidth}{0.6pt}
 \renewcommand{\headrule}{{\color{rose}\hrule height\headrulewidth\vskip-\headrulewidth}}
-
 \setlength{\parindent}{0pt}
 \setlist{itemsep=1pt,topsep=2pt,leftmargin=*}
 
@@ -40,51 +46,59 @@
 \lstset{
   language=Python,
   basicstyle=\ttfamily\footnotesize,
-  keywordstyle=\color{bfs}\bfseries,
+  keywordstyle=\color{kw}\bfseries,
   commentstyle=\color{gris}\itshape,
   stringstyle=\color{ok},
   backgroundcolor=\color{codebg},
-  frame=single, rulecolor=\color{rose},
+  frame=single, rulecolor=\color{gris!40},
   framesep=3pt, xleftmargin=3pt, xrightmargin=3pt,
-  aboveskip=4pt, belowskip=2pt,
+  aboveskip=3pt, belowskip=2pt,
   showstringspaces=false, columns=fullflexible, keepspaces=true,
   literate={é}{{\'e}}1 {è}{{\`e}}1 {ê}{{\^e}}1 {à}{{\`a}}1 {â}{{\^a}}1 {ç}{{\c c}}1 {ù}{{\`u}}1 {ô}{{\^o}}1 {î}{{\^i}}1 {É}{{\'E}}1,
   morekeywords={None,True,False,is},
 }
+\lstdefinestyle{tree}{backgroundcolor=\color{treebg},rulecolor=\color{treec}}
+\lstdefinestyle{tab}{backgroundcolor=\color{tabbg},rulecolor=\color{tabc}}
 
 % ---------- boites ----------
-\newtcolorbox{regle}[1]{enhanced,colback=roseclair,colframe=warn,
+\newtcolorbox{regle}[1]{enhanced,colback=roseclair,colframe=theme,
   fonttitle=\bfseries,title=#1,boxrule=0.8pt,arc=2pt,left=4pt,right=4pt,top=3pt,bottom=3pt}
 \newtcolorbox{boxbfs}[1]{enhanced,colback=bfs!5,colframe=bfs,
   fonttitle=\bfseries,title=#1,boxrule=0.8pt,arc=2pt,left=4pt,right=4pt,top=3pt,bottom=3pt}
 \newtcolorbox{boxdfs}[1]{enhanced,colback=dfs!5,colframe=dfs,
   fonttitle=\bfseries,title=#1,boxrule=0.8pt,arc=2pt,left=4pt,right=4pt,top=3pt,bottom=3pt}
-\newtcolorbox{boxok}[1]{enhanced,colback=ok!5,colframe=ok,
+\newtcolorbox{boxok}[1]{enhanced,colback=themedark!4,colframe=themedark,
   fonttitle=\bfseries,title=#1,boxrule=0.8pt,arc=2pt,left=4pt,right=4pt,top=3pt,bottom=3pt}
 
 \newcommand{\BFS}{\textcolor{bfs}{\textbf{BFS}}}
 \newcommand{\DFS}{\textcolor{dfs}{\textbf{DFS}}}
 \newcommand{\mot}[1]{\colorbox{rose!55}{\strut\textbf{#1}}}
 \newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\tc}[1]{\textcolor{treec}{\texttt{#1}}}   % code Tree
+\newcommand{\bc}[1]{\textcolor{tabc}{\texttt{#1}}}    % code TreeAsBin
+\newcommand{\TREE}{\colorbox{treec}{\color{white}\strut\small\bfseries\ttfamily Tree}}
+\newcommand{\TAB}{\colorbox{tabc}{\color{white}\strut\small\bfseries\ttfamily TreeAsBin}}
+\newcommand{\sect}[1]{\section*{\color{theme}#1}}
 
 \begin{document}
 
-\begin{tcolorbox}[enhanced,colback=warn,colframe=warn,arc=4pt,boxrule=0pt,
-  left=8pt,right=8pt,top=6pt,bottom=6pt,halign=center,
-  borderline south={3pt}{0pt}{rose}]
-{\color{white}\LARGE\bfseries Fiche patterns -- Arbres g\'en\'eraux}\\[3pt]
-{\color{white}\small\code{Tree} (\code{key}, \code{children}, \code{nbchildren}) \quad$\cdot$\quad
-\code{TreeAsBin} (\code{key}, \code{child}, \code{sibling}) \quad$\cdot$\quad
-\code{Queue} (\code{enqueue}, \code{dequeue}, \code{isempty})}
+\begin{tcolorbox}[enhanced,colback=theme,colframe=theme,arc=4pt,boxrule=0pt,
+  left=8pt,right=8pt,top=6pt,bottom=6pt,halign=center,borderline south={3pt}{0pt}{rose}]
+{\color{white}\LARGE\bfseries Fiche patterns -- Arbres g\'en\'eraux}\\[4pt]
+\colorbox{treebg}{\strut\small\color{treec}\textbf{Tree} : \texttt{T.key}, \texttt{T.children} (liste), \texttt{T.nbchildren}}
+\quad
+\colorbox{tabbg}{\strut\small\color{tabc}\textbf{TreeAsBin} : \texttt{B.key}, \texttt{B.child}, \texttt{B.sibling}}
+\quad
+\colorbox{white}{\strut\small\color{gris}\textbf{Queue} : \texttt{enqueue}, \texttt{dequeue}, \texttt{isempty}}
 \end{tcolorbox}
 
 % =====================================================================
-\section*{\color{warn}\'Etape 1 -- BFS ou DFS ? Un seul mot d\'ecide}
+\sect{\'Etape 1 -- BFS ou DFS ? Un seul mot d\'ecide}
 
 \begin{regle}{La r\`egle}
 \Large Le mot \mot{niveau} (ou \mot{largeur}) est dans l'\'enonc\'e \;$\Rightarrow$\; \BFS.\\[3pt]
 Sinon \;$\Rightarrow$\; \DFS{} \normalsize (c'est le choix \textbf{par d\'efaut}).\\[3pt]
-\normalsize Exception : le sujet \textbf{impose} le parcours («~en profondeur~») $\Rightarrow$ on ob\'eit.
+\normalsize Exception : le sujet \textbf{impose} le parcours (« en profondeur ») $\Rightarrow$ on ob\'eit.
 \end{regle}
 
 \begin{multicols}{2}
@@ -94,64 +108,55 @@ Sinon \;$\Rightarrow$\; \DFS{} \normalsize (c'est le choix \textbf{par d\'efaut}
 \item \mot{largeur}
 \item m\^eme \mot{profondeur que x} (sur le m\^eme niveau)
 \item le \mot{plus proche de la racine}
-\item le premier rencontr\'e «~en largeur~»
 \end{itemize}
 \end{boxbfs}
-
 \columnbreak
 \begin{boxdfs}{Mots qui veulent dire DFS}
 \begin{itemize}
-\item \mot{fils}, \mot{p\`ere}, \mot{sous-arbre}
-\item \mot{chemin}, \mot{feuille}
+\item \mot{fils}, \mot{p\`ere}, \mot{sous-arbre}, \mot{chemin}, \mot{feuille}
 \item \mot{hauteur}, taille, somme, moyenne
 \item profondeur \textbf{d'un n\oe ud} ou \textbf{des feuilles}
-\item «~parcours profondeur~» impos\'e
+\item « parcours profondeur » impos\'e
 \end{itemize}
 \end{boxdfs}
 \end{multicols}
 
 \vspace{-4pt}
 \begin{center}
-\renewcommand{\arraystretch}{1.15}
-\begin{tabular}{p{9.6cm} l c}
+\renewcommand{\arraystretch}{1.12}
+\begin{tabular}{p{9.8cm} l c}
 \toprule
 \textbf{\'Enonc\'e} & \textbf{Mot rep\`ere} & \textbf{Parcours}\\
 \midrule
 Chaque \textbf{niveau} a plus de n\oe uds que le pr\'ec\'edent & niveau & \BFS\\
 Nombre max de n\oe uds sur un m\^eme \textbf{niveau} & niveau & \BFS\\
-Cl\'es apr\`es x sur le m\^eme \textbf{niveau} & niveau & \BFS\\
 N\oe ud de cl\'e x le \textbf{plus proche de la racine} & plus proche & \BFS\\
 \midrule
 Cl\'e de chaque n\oe ud = somme des cl\'es de ses \textbf{fils} & fils & \DFS\\
 Existe-t-il un \textbf{chemin} racine $\to$ feuille de somme s ? & chemin & \DFS\\
-Moyenne de chaque \textbf{sous-arbre} $\leq$ cl\'e du n\oe ud & sous-arbre & \DFS\\
-Profondeur moyenne des \textbf{feuilles} \hfill{\color{warn}\small(pi\`ege)} & feuilles & \DFS\\
+Profondeur moyenne des \textbf{feuilles} \hfill{\color{theme}\small(pi\`ege)} & feuilles & \DFS\\
 \bottomrule
 \end{tabular}
 \end{center}
 
 \begin{multicols}{2}
-\textbf{Pourquoi ?} Sur le m\^eme arbre, voici l'ordre de visite :
-
+\textbf{Pourquoi ?} Ordre de visite sur le m\^eme arbre :
 \begin{center}
 \begin{forest}
-for tree={circle,draw=dfs,thick,minimum size=15pt,inner sep=1pt,
-  font=\small\bfseries\color{dfs},s sep=6pt,l sep=8pt}
+for tree={circle,draw=dfs,thick,minimum size=15pt,inner sep=1pt,font=\small\bfseries\color{dfs},s sep=6pt,l sep=8pt}
 [1 [2 [3] [4]] [5 [6]] [7]]
 \end{forest}
 \quad
 \begin{forest}
-for tree={circle,draw=bfs,thick,minimum size=15pt,inner sep=1pt,
-  font=\small\bfseries\color{bfs},s sep=6pt,l sep=8pt}
+for tree={circle,draw=bfs,thick,minimum size=15pt,inner sep=1pt,font=\small\bfseries\color{bfs},s sep=6pt,l sep=8pt}
 [1 [2 [5] [6]] [3 [7]] [4]]
 \end{forest}\\[2pt]
 {\small\textcolor{dfs}{DFS} : descend d'abord \hfill \textcolor{bfs}{BFS} : niveau par niveau}
 \end{center}
-
 \columnbreak
 \begin{itemize}
-\item Le \BFS{} donne tous les n\oe uds d'un niveau \textbf{\`a la suite} $\to$ on peut compter / comparer par niveau et \textbf{s'arr\^eter t\^ot}.
-\item Le \DFS{} m\'elange les niveaux, mais il voit chaque n\oe ud \textbf{avec ses fils} $\to$ id\'eal pour p\`ere/fils, sous-arbres, chemins.
+\item Le \BFS{} donne tous les n\oe uds d'un niveau \textbf{\`a la suite} $\to$ on compare par niveau et on \textbf{s'arr\^ete t\^ot}.
+\item Le \DFS{} voit chaque n\oe ud \textbf{avec ses fils} $\to$ id\'eal pour p\`ere/fils, sous-arbres, chemins.
 \end{itemize}
 \end{multicols}
 
@@ -159,48 +164,68 @@ for tree={circle,draw=bfs,thick,minimum size=15pt,inner sep=1pt,
 \begin{enumerate}
 \item \textbf{BFS ou DFS ?} $\to$ le mot rep\`ere ci-dessus.
 \item \textbf{Que renvoie une feuille ?} $\to$ fixe le cas de base et la valeur de d\'epart.
-\item \textbf{Comment je combine les fils ?} $\to$ somme, \code{max}, «~tous vrais~», «~au moins un vrai~».
-\item \textbf{Puis-je m'arr\^eter avant la fin ?} $\to$ si oui : \code{while C and ...} ou \code{return} dans la boucle.
+\item \textbf{Comment je combine les fils ?} $\to$ somme, \code{max}, « tous vrais » (CHAQUE), « au moins un » (IL EXISTE).
+\item \textbf{Puis-je m'arr\^eter avant la fin ?} $\to$ si oui : condition dans le \code{while} ou \code{return} dans la boucle.
 \end{enumerate}
 \end{boxok}
 
 \newpage
 % =====================================================================
-\section*{\color{dfs}DFS 1 -- Accumuler (taille, feuilles, hauteur)}
+\sect{Les deux classes en un coup d'\oe il}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{l l l}
+\toprule
+ & \TREE & \TAB\\
+\midrule
+Est-ce une feuille ? & \tc{T.nbchildren == 0} & \bc{B.child is None}\\
+Premier fils & \tc{T.children[0]} & \bc{C = B.child}\\
+Fils suivant & \tc{i += 1} \; puis \tc{T.children[i]} & \bc{C = C.sibling}\\
+Parcourir tous les fils & \tc{for C in T.children:} & \bc{while C: ... C = C.sibling}\\
+Nombre de fils & \tc{T.nbchildren} & \bc{\`a compter (boucle)}\\
+« Arriv\'e au bout » (boucle while) & \tc{i == T.nbchildren} & \bc{C is None}\\
+« Arr\^et\'e avant la fin » & \tc{i < T.nbchildren} & \bc{C is not None}\\
+\bottomrule
+\end{tabular}
+\end{center}
 
 \begin{regle}{Comment lire les squelettes}
-Les mots \textbf{EN MAJUSCULES} (\code{DEPART}, \code{COMBINE}, \code{FIN}, \code{LOCAL\_OK}, \code{TEST}) ne sont \textbf{pas} du Python : ce sont des \textbf{trous \`a remplir} selon l'exo. Les commentaires disent quoi mettre.
+Les mots \textbf{EN MAJUSCULES} (\code{DEPART}, \code{COMBINE}, \code{FIN}, \code{LOCAL\_OK}, \code{TEST}) ne sont \textbf{pas} du Python : ce sont des \textbf{trous \`a remplir} selon l'exo. Chaque pattern est donn\'e \textcolor{treec}{\textbf{\`a gauche en Tree}} et \textcolor{tabc}{\textbf{\`a droite en TreeAsBin}}.
 \end{regle}
+
+% =====================================================================
+\sect{DFS 1 -- Accumuler (taille, feuilles, hauteur)}
 
 On appelle la fonction sur \textbf{chaque fils}, on combine, et on fait \code{return} \textbf{apr\`es} la boucle.
 
 \begin{multicols}{2}
-\textbf{\code{Tree}}
-\begin{lstlisting}
+\TREE
+\begin{lstlisting}[style=tree]
 def f(T):
-    acc = DEPART        # ce que vaut une feuille
-    for C in T.children:  # chaque fils C, un par un
-        r = f(C)          # résultat du sous-arbre C
+    acc = DEPART       # ce que vaut une feuille
+    for C in T.children:   # chaque fils C
+        r = f(C)       # résultat du sous-arbre C
         acc = COMBINE(acc, r)  # ex : acc + r
                                #   ou max(acc, r)
-    return FIN(acc)     # souvent juste acc
+    return FIN(acc)    # souvent juste acc
 \end{lstlisting}
 \columnbreak
-\textbf{\code{TreeAsBin}}
-\begin{lstlisting}
+\TAB
+\begin{lstlisting}[style=tab]
 def f(B):
-    acc = DEPART        # ce que vaut une feuille
-    C = B.child         # premier fils
-    while C:            # tant qu'il reste un fils
-        r = f(C)        # résultat du sous-arbre C
+    acc = DEPART       # ce que vaut une feuille
+    C = B.child        # premier fils
+    while C:           # tant qu'il reste un fils
+        r = f(C)       # résultat du sous-arbre C
         acc = COMBINE(acc, r)
-        C = C.sibling   # fils suivant (obligatoire !)
+        C = C.sibling  # fils suivant (obligatoire !)
     return FIN(acc)
 \end{lstlisting}
 \end{multicols}
 
 \begin{center}
-\renewcommand{\arraystretch}{1.15}
+\renewcommand{\arraystretch}{1.12}
 \begin{tabular}{l l l l l}
 \toprule
 \textbf{Fonction} & \textbf{D\'epart} & \textbf{Combinaison} & \textbf{Fin} & \textbf{\code{if} feuille ?}\\
@@ -209,195 +234,343 @@ taille & \code{s = 1} & \code{s += f(C)} & \code{s} & non\\
 feuilles & \code{s = 0} & \code{s += f(C)} & \code{s} & oui : \code{return 1}\\
 hauteur (feuille = 0) & \code{h = -1} & \code{h = max(h, f(C))} & \code{h + 1} & non\\
 arit\'e max & \code{k = m = 0} & \code{k += 1 ; m = max(m, f(C))} & \code{max(k, m)} & non\\
+max des fils & \code{m = 1\textsuperscript{re} cl\'e} & \code{m = max(m, C.key)} & \code{m} & -- \\
 \bottomrule
 \end{tabular}
 \end{center}
-{\small Le \code{if} feuille ne sert que si une feuille renvoie autre chose que la formule g\'en\'erale avec z\'ero fils.}
-
-% =====================================================================
-\section*{\color{dfs}DFS 2 -- V\'erifier une propri\'et\'e avec arr\^et anticip\'e}
-
-On s'arr\^ete au \textbf{premier \code{False}} : c'est ce que l'EPITA note en optimisation.
-
-\begin{multicols}{2}
-\textbf{Sans \code{return} dans la boucle}
-\begin{lstlisting}
-def check(B):
-    if not LOCAL_OK(B):   # B lui-même respecte
-        return False      # la règle ? (ex : B.key >= 0)
-    C = B.child
-    while C and check(C): # on avance tant que
-        C = C.sibling     # les fils sont OK
-    return C is None      # None : tous vus, tous OK
-                          # sinon : un fils a échoué
-\end{lstlisting}
-\columnbreak
-\textbf{Avec \code{return} dans la boucle}
-\begin{lstlisting}
-def check(T):
-    if not LOCAL_OK(T):   # T lui-même respecte
-        return False      # la règle ?
-    for C in T.children:
-        if not check(C):  # un fils échoue :
-            return False  # on arrête tout de suite
-    return True           # tous les fils sont OK
-\end{lstlisting}
-\end{multicols}
-
-\textbf{Variante «~il existe~»} (chemin de somme s) : on s'arr\^ete au \textbf{premier \code{True}}.
-\begin{lstlisting}
-C = B.child
-while C and not f(C):   # on cherche un fils qui réussit
-    C = C.sibling
-return C is not None    # True : on en a trouvé un
-\end{lstlisting}
+{\small Le \code{if} feuille ne sert que si une feuille renvoie autre chose que la formule g\'en\'erale avec z\'ero fils. Pour un \textbf{max}, ne jamais partir de 0 (cl\'es n\'egatives) : partir du premier \'el\'ement r\'eel.}
 
 \newpage
 % =====================================================================
-\section*{\color{dfs}DFS 2 bis -- «~CHAQUE~» ou «~IL EXISTE~» ?}
+\sect{DFS 2 -- V\'erifier : « CHAQUE » ou « IL EXISTE » ?}
 
 \begin{regle}{Le mot de l'\'enonc\'e choisit la boucle}
-\textbf{«~chaque~», «~tous~»} $\Rightarrow$ tous les fils doivent r\'eussir $\Rightarrow$ on s'arr\^ete au \textbf{premier \'echec}.\\
-\textbf{«~existe-t-il~», «~au moins un~»} $\Rightarrow$ un seul fils suffit $\Rightarrow$ on s'arr\^ete au \textbf{premier succ\`es}.\\[2pt]
+\textbf{« chaque », « tous »} $\Rightarrow$ tous les fils doivent r\'eussir $\Rightarrow$ on s'arr\^ete au \textbf{premier \'echec}.\\
+\textbf{« existe-t-il », « au moins un »} $\Rightarrow$ un seul fils suffit $\Rightarrow$ on s'arr\^ete au \textbf{premier succ\`es}.\\[2pt]
 Rappel : la condition d'un \code{while} dit quand on \textbf{continue}, pas quand on s'arr\^ete.
 \end{regle}
 
+\textbf{\large CHAQUE / TOUS} \hfill {\small check\_sum, check\_max, heap\_min, even\_leaves, deep\_enough}
 \begin{multicols}{2}
-\textbf{\color{dfs}CHAQUE / TOUS} {\small(check\_sum, check\_max, heap\_min)}\\[2pt]
-\textbf{Version \code{while}}
-\begin{lstlisting}
-C = B.child
-while C and f(C):     # tant que le fils RÉUSSIT
-    C = C.sibling     # on continue
-return C is None      # au bout = tous OK
-\end{lstlisting}
-\textbf{Version \code{if}}
-\begin{lstlisting}
-C = B.child
-while C:
-    if not f(C):      # un fils échoue
-        return False  # tout est faux
-    C = C.sibling
-return True           # aucun échec
+\TREE
+\begin{lstlisting}[style=tree]
+def check(T):
+    if not LOCAL_OK(T):  # T respecte la règle ?
+        return False
+    i = 0
+    while (i < T.nbchildren
+           and check(T.children[i])):
+        i += 1           # fils OK : au suivant
+    return i == T.nbchildren  # au bout = tous OK
 \end{lstlisting}
 \columnbreak
-\textbf{\color{bfs}IL EXISTE} {\small(path\_sum, path\_increasing, leaf\_at\_depth)}\\[2pt]
-\textbf{Version \code{while}}
-\begin{lstlisting}
-C = B.child
-while C and not f(C): # tant que le fils ÉCHOUE
-    C = C.sibling     # on continue
-return C is not None  # arrêté sur un fils = trouvé
+\TAB
+\begin{lstlisting}[style=tab]
+def check(B):
+    if not LOCAL_OK(B):  # B respecte la règle ?
+        return False
+    C = B.child
+    while C and check(C):  # tant que le fils RÉUSSIT
+        C = C.sibling
+    return C is None     # au bout = tous OK
 \end{lstlisting}
-\textbf{Version \code{if}}
-\begin{lstlisting}
-C = B.child
-while C:
-    if f(C):          # un fils réussit
-        return True   # trouvé
-    C = C.sibling
-return False          # aucun succès
+\end{multicols}
+
+\textbf{\large IL EXISTE} \hfill {\small path\_sum, path\_increasing, path\_below, leaf\_at\_depth}
+\begin{multicols}{2}
+\TREE
+\begin{lstlisting}[style=tree]
+def exists(T):
+    if not LOCAL_OK(T):    # chemin mort ?
+        return False
+    if T.nbchildren == 0:  # feuille atteinte
+        return True        # (ou le test final)
+    i = 0
+    while (i < T.nbchildren
+           and not exists(T.children[i])):
+        i += 1             # fils échoue : au suivant
+    return i < T.nbchildren  # arrêté avant = trouvé
+\end{lstlisting}
+\columnbreak
+\TAB
+\begin{lstlisting}[style=tab]
+def exists(B):
+    if not LOCAL_OK(B):    # chemin mort ?
+        return False
+    if B.child is None:    # feuille atteinte
+        return True        # (ou le test final)
+    C = B.child
+    while C and not exists(C):  # tant que ÉCHEC
+        C = C.sibling
+    return C is not None   # arrêté sur un fils
+\end{lstlisting}
+\end{multicols}
+
+\textbf{Versions avec \code{return} dans la boucle} (accept\'ees, souvent plus lisibles)
+\begin{multicols}{2}
+\TREE
+\begin{lstlisting}[style=tree]
+# CHAQUE                    # IL EXISTE
+for C in T.children:        for C in T.children:
+    if not check(C):            if exists(C):
+        return False                return True
+return True                 return False
+\end{lstlisting}
+\columnbreak
+\TAB
+\begin{lstlisting}[style=tab]
+# CHAQUE                    # IL EXISTE
+C = B.child                 C = B.child
+while C:                    while C:
+    if not check(C):            if exists(C):
+        return False                return True
+    C = C.sibling               C = C.sibling
+return True                 return False
 \end{lstlisting}
 \end{multicols}
 
 \begin{center}
-\renewcommand{\arraystretch}{1.2}
+\renewcommand{\arraystretch}{1.15}
 \begin{tabular}{l l l}
 \toprule
- & \textbf{\color{dfs}CHAQUE} & \textbf{\color{bfs}IL EXISTE}\\
+ & \textbf{CHAQUE} & \textbf{IL EXISTE}\\
 \midrule
-Condition du \code{while} & \code{f(C)} & \code{not f(C)}\\
-\code{return} final & \code{C is None} & \code{C is not None}\\
-Version \code{if} : dans la boucle & \code{if not f(C): return False} & \code{if f(C): return True}\\
-Version \code{if} : apr\`es la boucle & \code{return True} & \code{return False}\\
+Condition du \code{while} & \code{f(fils)} & \code{not f(fils)}\\
+\code{return} final \TREE & \tc{i == T.nbchildren} & \tc{i < T.nbchildren}\\
+\code{return} final \TAB & \bc{C is None} & \bc{C is not None}\\
+Cas feuille \`a \'ecrire ? & seulement si la feuille a sa propre r\`egle & \textbf{toujours} (sinon rien n'est trouv\'e)\\
 \bottomrule
 \end{tabular}\\[3pt]
-{\small Les deux sont \textbf{en miroir} : l\`a o\`u l'une met un \code{not}, l'autre l'enl\`eve, et les \code{True} / \code{False} s'\'echangent.\\
-Le \code{not} va \textbf{soit} dans le \code{while}, \textbf{soit} dans le \code{return} : jamais les deux, jamais aucun.}
+{\small Les deux sont \textbf{en miroir} : le \code{not} va \textbf{soit} dans le \code{while}, \textbf{soit} dans le \code{return}, jamais les deux, jamais aucun.}
 \end{center}
 
-\begin{boxok}{Faut-il une fonction auxiliaire ? \'Ecris la phrase d'abord}
-«~Vrai si \ldots{} dans le sous-arbre B, \textbf{sachant que} \ldots{}~» \quad (c'est la docstring exig\'ee)
-\begin{itemize}
-\item Pas de «~sachant que~» $\Rightarrow$ \textbf{pas d'auxiliaire} (hauteur, check\_sum, path\_sum : \code{s} est d\'ej\`a dans l'\'enonc\'e).
-\item Il manque une info \textbf{d'au-dessus} (p\`ere, profondeur, reste\ldots) $\Rightarrow$ auxiliaire avec \textbf{un param\`etre qui descend} (\code{prev}, \code{d}, \code{k}, \code{L}).
-\item Il faut \textbf{plusieurs infos d'en dessous} (nombre ET somme) $\Rightarrow$ auxiliaire qui \textbf{renvoie un tuple}.
-\item Racine sans p\`ere : lui donner un faux p\`ere qui la laisse passer (ex. \code{B.key - 1}).
-\end{itemize}
+\begin{boxok}{O\`u placer le test de la r\`egle ? « Quels n\oe uds sont concern\'es ? »}
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{l l l}
+\textbf{Les feuilles seulement} & $\to$ dans le \code{if} feuille & ex. even\_leaves : \code{return T.key \% 2 == 0}\\
+\textbf{Tous les n\oe uds} & $\to$ au \textbf{d\'ebut}, avant la boucle & ex. heap\_min, path\_below, deep\_enough\\
+\textbf{Les n\oe uds internes} & $\to$ \textbf{apr\`es} la boucle & ex. check\_sum : \code{... and s == T.key}\\
+\end{tabular}
 \end{boxok}
 
+\newpage
 % =====================================================================
-\section*{\color{dfs}DFS 3 -- Remonter un tuple (plusieurs infos, un seul parcours)}
+\sect{DFS 3 -- Remonter un tuple (plusieurs infos, un seul parcours)}
 
-\begin{lstlisting}
+\begin{multicols}{2}
+\TREE
+\begin{lstlisting}[style=tree]
+def __aux(T):
+    """renvoie (ok, nb, somme) du
+       sous-arbre T"""
+    (nb, s) = (1, T.key)    # T tout seul
+    ok = True
+    i = 0
+    while i < T.nbchildren and ok:
+        (ok, n, sc) = __aux(T.children[i])
+        ok = ok and TEST(n, sc, T)
+                            # ex : sc / n <= T.key
+        nb += n             # + ses noeuds
+        s += sc             # + ses clés
+        i += 1
+    return (ok, nb, s)
+
+def f(T):
+    return __aux(T)[0]      # on garde ok
+\end{lstlisting}
+\columnbreak
+\TAB
+\begin{lstlisting}[style=tab]
 def __aux(B):
-    """renvoie (ok, nb, somme) du sous-arbre B
-       ok    : la règle est vraie partout
-       nb    : nombre de noeuds
-       somme : somme des clés"""
-    (nb, s) = (1, B.key)       # B tout seul
+    """renvoie (ok, nb, somme) du
+       sous-arbre B"""
+    (nb, s) = (1, B.key)    # B tout seul
     ok = True
     C = B.child
-    while C and ok:            # stop dès que ok = False
-        (ok, n, sc) = __aux(C) # infos du fils C
+    while C and ok:         # stop dès ok = False
+        (ok, n, sc) = __aux(C)
         ok = ok and TEST(n, sc, B)
-                               # ex : sc / n <= B.key
-        nb += n                # + ses noeuds
-        s += sc                # + ses clés
+                            # ex : sc / n <= B.key
+        nb += n             # + ses noeuds
+        s += sc             # + ses clés
         C = C.sibling
     return (ok, nb, s)
 
 def f(B):
-    return __aux(B)[0]         # on ne garde que ok
+    return __aux(B)[0]      # on garde ok
 \end{lstlisting}
-\begin{multicols}{2}
-\begin{itemize}
-\item Deux parcours s\'epar\'es (\code{size} puis \code{somme}) = \textbf{points perdus}.
-\item La docstring de \code{\_\_aux} est \textbf{obligatoire} : dire ce que vaut chaque case du tuple.
-\item La derni\`ere fonction \'ecrite = celle demand\'ee (\code{f}).
-\item Exemples TD : \code{average\_subtrees} $\to$ \code{(ok, nb, somme)}, \code{average\_arity} $\to$ \code{(nb internes, somme arit\'es)}.
-\end{itemize}
 \end{multicols}
-
+{\small Deux parcours s\'epar\'es (size puis somme) = \textbf{points perdus}. Docstring \textbf{obligatoire} : dire ce que vaut chaque case du tuple. Exemples TD : average\_subtrees $\to$ \code{(ok, nb, somme)}, average\_arity $\to$ \code{(nb internes, somme arit\'es)}.}
 
 % =====================================================================
-\section*{\color{dfs}DFS 4 -- Un param\`etre qui descend}
+\sect{DFS 4 -- Un param\`etre qui descend}
 
 Le tuple \textbf{remonte} des fils vers le p\`ere ; ici l'info \textbf{descend} du p\`ere vers les fils.
 
 \begin{multicols}{2}
-\begin{lstlisting}
+\TREE
+\begin{lstlisting}[style=tree]
+def __aux(T, d):
+    """d = profondeur de T (racine : 0)"""
+    if T.nbchildren == 0:   # feuille :
+        return d            # sa profondeur
+    s = 0
+    for C in T.children:
+        s += __aux(C, d + 1)  # fils : 1 cran plus bas
+    return s
+
+def lce(T):
+    return __aux(T, 0)      # on part de la racine
+\end{lstlisting}
+\columnbreak
+\TAB
+\begin{lstlisting}[style=tab]
 def __aux(B, d):
     """d = profondeur de B (racine : 0)"""
-    if B.child is None:       # feuille :
-        return d              # on renvoie sa profondeur
+    if B.child is None:     # feuille :
+        return d            # sa profondeur
     s = 0
     C = B.child
     while C:
-        s += __aux(C, d + 1)  # le fils est 1 cran
-        C = C.sibling         # plus bas
+        s += __aux(C, d + 1)  # fils : 1 cran plus bas
+        C = C.sibling
     return s
 
 def lce(B):
-    return __aux(B, 0)        # on part de la racine
+    return __aux(B, 0)
 \end{lstlisting}
-\columnbreak
-\renewcommand{\arraystretch}{1.15}
-\begin{tabular}{l l l}
-\toprule
-\textbf{Exo} & \textbf{Param.} & \textbf{Vers le fils}\\
-\midrule
-cheminement & \code{d} & \code{d + 1}\\
-cl\'es niveau k & \code{k} & \code{k - 1}\\
-chemin somme s & \code{s} & \code{s - B.key}\\
-plus d'enfants & \code{nbc} & nb fils de \code{B}\\
-\bottomrule
-\end{tabular}\\[4pt]
-{\small Remplir une liste : la passer en param\`etre et faire \code{L.append(...)}, sans la renvoyer.}
 \end{multicols}
 
+\begin{center}
+\renewcommand{\arraystretch}{1.12}
+\begin{tabular}{l l l l}
+\toprule
+\textbf{Exo} & \textbf{Param\`etre} & \textbf{Vers le fils} & \textbf{Au d\'epart (racine)}\\
+\midrule
+cheminement, deep\_enough & profondeur \code{d} & \code{d + 1} & \code{0}\\
+cl\'es du niveau k & niveaux restants \code{k} & \code{k - 1} & \code{k} ; on prend la cl\'e quand \code{k == 0}\\
+chemin de somme s & reste \code{s} & \code{s - cl\'e} & \code{s}\\
+heap\_min, path\_increasing & cl\'e du p\`ere \code{prev} & cl\'e du n\oe ud & faux p\`ere : \code{cl\'e - 1}\\
+liste \`a remplir & liste \code{L} & la m\^eme \code{L} & \code{[]} (puis \code{L.append(...)})\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{boxok}{Faut-il une fonction auxiliaire ? \'Ecris la phrase d'abord (c'est la docstring exig\'ee)}
+« Vrai si \ldots{} dans le sous-arbre, \textbf{sachant que} \ldots{} »
+\begin{itemize}
+\item Pas de « sachant que » $\Rightarrow$ \textbf{pas d'auxiliaire} (hauteur, check\_sum, path\_sum : \code{s} est d\'ej\`a dans l'\'enonc\'e).
+\item Il manque une info \textbf{d'au-dessus} (p\`ere, profondeur, reste\ldots) $\Rightarrow$ auxiliaire avec \textbf{un param\`etre qui descend}.
+\item Il faut \textbf{plusieurs infos d'en dessous} (nombre ET somme) $\Rightarrow$ auxiliaire qui \textbf{renvoie un tuple}.
+\item Jamais une fonction s\'epar\'ee pour « calculer la profondeur » : un n\oe ud ne conna\^it pas son p\`ere, on la fait \textbf{descendre}.
+\end{itemize}
+\end{boxok}
+
+\newpage
 % =====================================================================
-\section*{\color{gris}Parcours parall\`ele \code{Tree} / \code{TreeAsBin}}
+\sect{BFS -- Par niveaux (marqueur \code{None} ou 2 files)}
+
+La file m\'elange deux niveaux. On rep\`ere la \textbf{fin d'un niveau} : c'est \textbf{le seul endroit} o\`u on compare et o\`u on s'arr\^ete.
+
+\textbf{\large Marqueur \code{None}}
+\begin{multicols}{2}
+\TREE
+\begin{lstlisting}[style=tree]
+q = Queue()
+q.enqueue(T)
+q.enqueue(None)       # None = fin du niveau 0
+cur = 0               # noeuds vus dans ce niveau
+while not q.isempty():
+    T = q.dequeue()
+    if T is None:     # >>> FIN D'UN NIVEAU <<<
+        ...           # ici : comparer, return...
+        cur = 0
+        if not q.isempty():  # sinon boucle infinie
+            q.enqueue(None)
+    else:
+        cur += 1      # un noeud de plus
+        for C in T.children:
+            q.enqueue(C)     # niveau suivant
+\end{lstlisting}
+\columnbreak
+\TAB
+\begin{lstlisting}[style=tab]
+q = Queue()
+q.enqueue(B)
+q.enqueue(None)       # None = fin du niveau 0
+cur = 0
+while not q.isempty():
+    B = q.dequeue()
+    if B is None:     # >>> FIN D'UN NIVEAU <<<
+        ...           # ici : comparer, return...
+        cur = 0
+        if not q.isempty():
+            q.enqueue(None)
+    else:
+        cur += 1
+        C = B.child
+        while C:             # enfiler les fils
+            q.enqueue(C)
+            C = C.sibling
+\end{lstlisting}
+\end{multicols}
+
+\textbf{\large Deux files}
+\begin{multicols}{2}
+\TREE
+\begin{lstlisting}[style=tree]
+q = Queue()
+q.enqueue(T)
+while not q.isempty():     # 1 tour = 1 niveau
+    q_next = Queue()       # niveau suivant
+    cur = 0
+    while not q.isempty(): # 1 tour = 1 noeud
+        T = q.dequeue()
+        cur += 1
+        for C in T.children:
+            q_next.enqueue(C)
+    ...                    # >>> FIN DU NIVEAU <<<
+    q = q_next             # on passe au suivant
+\end{lstlisting}
+\columnbreak
+\TAB
+\begin{lstlisting}[style=tab]
+q = Queue()
+q.enqueue(B)
+while not q.isempty():     # 1 tour = 1 niveau
+    q_next = Queue()
+    cur = 0
+    while not q.isempty(): # 1 tour = 1 noeud
+        B = q.dequeue()
+        cur += 1
+        C = B.child
+        while C:
+            q_next.enqueue(C)
+            C = C.sibling
+    ...                    # >>> FIN DU NIVEAU <<<
+    q = q_next
+\end{lstlisting}
+\end{multicols}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.12}
+\begin{tabular}{l l l}
+\toprule
+\textbf{Exo} & \textbf{Gard\'e d'un niveau \`a l'autre} & \textbf{\`A la fin de chaque niveau}\\
+\midrule
+largeur & \code{w} & \code{w = max(w, cur)}\\
+level\_up & \code{prev} (d\'epart 0) & \code{if cur <= prev: return False} \; puis \code{prev = cur}\\
+max par niveau & liste \code{L} & \code{L.append(m)}\\
+niveau de x & \code{lvl} & \code{lvl += 1} \; (et \code{return lvl} d\`es que x sort de la file)\\
+niveaux croissants & \code{last} & \code{last = None}\\
+\bottomrule
+\end{tabular}
+\end{center}
+{\small\color{theme}\textbf{Attention :} \code{Queue} n'a pas de \code{len} $\to$ on compte avec une variable (\code{cur}). On compare \textbf{\`a la fin du niveau}, jamais pendant qu'on enfile.}
+
+\newpage
+% =====================================================================
+\sect{Parcours parall\`ele \code{Tree} / \code{TreeAsBin}}
 
 \begin{multicols}{2}
 \begin{lstlisting}
@@ -415,90 +588,33 @@ def symmetric(T, B):
 \end{lstlisting}
 \columnbreak
 \begin{itemize}
-\item Un \textbf{indice} avance dans \code{children}, un \textbf{pointeur} avance sur les fr\`eres.
+\item Un \textbf{indice} \tc{i} avance dans \tc{T.children}, un \textbf{pointeur} \bc{C} avance sur les fr\`eres.
 \item Fin : \textbf{les deux \'epuis\'es en m\^eme temps}.
-\item Tree $\to$ TreeAsBin : parcourir les fils \textbf{de droite \`a gauche} et cha\^iner chaque copie devant la pr\'ec\'edente (\code{C.sibling = first}).
+\item \tc{Tree} $\to$ \bc{TreeAsBin} : parcourir les fils \textbf{de droite \`a gauche} et cha\^iner chaque copie devant la pr\'ec\'edente (\bc{C.sibling = first}).
+\item \bc{TreeAsBin} $\to$ \tc{Tree} : \tc{T.children.append(copie(C))} pour chaque fils \bc{C}.
 \end{itemize}
 \end{multicols}
 
-\newpage
 % =====================================================================
-\section*{\color{bfs}BFS -- Par niveaux (marqueur \code{None} ou 2 files)}
-
-La file m\'elange deux niveaux. On rep\`ere la \textbf{fin d'un niveau} : c'est \textbf{le seul endroit} o\`u on compare et o\`u on s'arr\^ete.
-
-\begin{multicols}{2}
-\textbf{Marqueur \code{None}}
-\begin{lstlisting}
-q = Queue()
-q.enqueue(T)
-q.enqueue(None)          # None = fin du niveau 0
-cur = 0                  # noeuds vus dans ce niveau
-while not q.isempty():
-    T = q.dequeue()
-    if T is None:        # >>> FIN D'UN NIVEAU <<<
-        ...              # ici : comparer, return...
-        cur = 0          # on repart à 0
-        if not q.isempty():  # sinon boucle infinie
-            q.enqueue(None)  # fin du niveau suivant
-    else:
-        cur += 1         # un noeud de plus
-        for C in T.children:
-            q.enqueue(C) # ses fils : niveau suivant
-\end{lstlisting}
-\columnbreak
-\textbf{Deux files}
-\begin{lstlisting}
-q = Queue()
-q.enqueue(T)
-while not q.isempty():     # 1 tour = 1 niveau
-    q_next = Queue()       # file du niveau suivant
-    cur = 0                # noeuds vus dans ce niveau
-    while not q.isempty(): # 1 tour = 1 noeud
-        T = q.dequeue()
-        cur += 1
-        for C in T.children:
-            q_next.enqueue(C)
-    ...                    # >>> FIN DU NIVEAU <<<
-                           # ici : comparer, return...
-    q = q_next             # on passe au suivant
-\end{lstlisting}
-{\small En \code{TreeAsBin}, remplacer le \code{for} par :\\
-\code{C = T.child ; while C: q.enqueue(C) ; C = C.sibling}}
-\end{multicols}
+\sect{Tes pi\`eges (vus en s\'eance)}
 
 \begin{center}
-\renewcommand{\arraystretch}{1.15}
-\begin{tabular}{l l l}
+\renewcommand{\arraystretch}{1.13}
+\begin{tabular}{l >{\color{ko}}l >{\color{ok}}l}
 \toprule
-\textbf{Exo} & \textbf{Gard\'e d'un niveau \`a l'autre} & \textbf{\`A la fin de chaque niveau}\\
+\textbf{Pi\`ege} & \textbf{\color{ko}Faux} & \textbf{\color{ok}Juste}\\
 \midrule
-largeur & \code{w} & \code{w = max(w, cur)}\\
-level\_up & \code{prev} & \code{if cur <= prev: return False} \; puis \code{prev = cur}\\
-max par niveau & liste \code{L} & \code{L.append(m)}\\
-niveau de x & \code{lvl} & \code{lvl += 1} \; (et \code{return lvl} d\`es que x sort)\\
-niveaux croissants & \code{last} & \code{last = None}\\
-\bottomrule
-\end{tabular}
-\end{center}
-{\small\color{warn}\textbf{Attention :} \code{Queue} n'a pas de \code{len} $\to$ on compte avec une variable.}
-
-% =====================================================================
-\section*{\color{warn}Tes pi\`eges (vus en s\'eance)}
-
-\begin{center}
-\renewcommand{\arraystretch}{1.15}
-\begin{tabular}{l >{\color{dfs}}l >{\color{ok}}l}
-\toprule
-\textbf{Pi\`ege} & \textbf{\color{dfs}Faux} & \textbf{\color{ok}Juste}\\
-\midrule
-N\oe ud ou liste de fils & \code{f(T.children)} & \code{for C in T.children: f(C)}\\
-Tester une feuille & \code{T.children == 0} & \code{T.nbchildren == 0}\\
-& \code{B.child == 0} & \code{B.child is None}\\
+N\oe ud ou liste de fils & \tc{f(T.children)} & \tc{for C in T.children: f(C)}\\
+Tester une feuille & \tc{T.children == 0} & \tc{T.nbchildren == 0}\\
+ & \bc{B.child == 0} & \bc{B.child is None}\\
 N\oe ud compar\'e \`a un nombre & \code{if C == 0} & \code{if C.key == 0}\\
 \code{return} qui coupe la boucle & \code{for ...: return 1 + f(C)} & accumuler, \code{return} apr\`es\\
-Mauvais d\'epart & \code{s = 1} pour les feuilles & «~le n\oe ud courant compte-t-il ?~»\\
-Fr\`ere oubli\'e & \code{while C:} sans \code{C.sibling} & toujours \code{C = C.sibling}\\
+Mauvais d\'epart & \code{s = 1} (feuilles), \code{m = 0} (max) & « le n\oe ud compte-t-il ? », 1\textsuperscript{er} \'el\'ement\\
+Fr\`ere / indice oubli\'e & \bc{while C:} sans \bc{C.sibling} & \bc{C = C.sibling} \; / \; \tc{i += 1}\\
+Appel r\'ecursif sur le m\^eme n\oe ud & \code{f(B)} dans la boucle & \code{f(C)} (le fils)\\
+Renommer sans changer l'appel & \code{def \_\_aux3 ... \_\_aux(C)} & m\^eme nom partout\\
+CHAQUE / IL EXISTE invers\'es & \code{not} dans le \code{while} \textbf{et} le \code{return} & un seul \code{not}\\
+IL EXISTE sans cas feuille & renvoie toujours \code{False} & \code{if feuille: return True}\\
 Taille d'une file & \code{len(q)} & un compteur\\
 Comparer trop t\^ot (BFS) & test dans le \code{for} & test \`a la fin du niveau\\
 \bottomrule
