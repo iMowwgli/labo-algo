@@ -563,9 +563,13 @@ level\_up & \code{prev} (d\'epart 0) & \code{if cur <= prev: return False} \; pu
 max par niveau & liste \code{L} & \code{L.append(m)}\\
 niveau de x & \code{lvl} & \code{lvl += 1} \; (et \code{return lvl} d\`es que x sort de la file)\\
 niveaux croissants & \code{last} & \code{last = None}\\
+levels (liste de listes) & \code{L} + \code{level = []} par niveau & \code{L.append(level)}\\
 \bottomrule
 \end{tabular}
 \end{center}
+{\small \textbf{Variante \'echange :} cr\'eer \code{q} et \code{qnxt} une seule fois en haut, puis \`a la fin de chaque niveau \code{q, qnxt = qnxt, q} (\code{q} est vide, elle resservira). M\^eme complexit\'e, les deux sont accept\'ees.\\
+\textbf{Pi\`ege levels :} \code{level = []} ne monte \textbf{jamais} en haut : \code{L.append(level)} range la \textbf{m\^eme} liste, on obtiendrait \code{[[0, 4], [0, 4], [0, 4], [0, 4]]}.\\
+\textbf{Deux tests \code{q.isempty()} :} l'int\'erieur = « reste-t-il des n\oe uds dans ce niveau ? », l'ext\'erieur = « l'\'echange a-t-il apport\'e un niveau suivant ? ».}\\[3pt]
 {\small\color{theme}\textbf{Attention :} \code{Queue} n'a pas de \code{len} $\to$ on compte avec une variable (\code{cur}). On compare \textbf{\`a la fin du niveau}, jamais pendant qu'on enfile.}
 
 \newpage
