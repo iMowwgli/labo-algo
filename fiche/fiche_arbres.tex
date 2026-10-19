@@ -252,6 +252,80 @@ while C and not f(C):   # on cherche un fils qui réussit
 return C is not None    # True : on en a trouvé un
 \end{lstlisting}
 
+\newpage
+% =====================================================================
+\section*{\color{dfs}DFS 2 bis -- «~CHAQUE~» ou «~IL EXISTE~» ?}
+
+\begin{regle}{Le mot de l'\'enonc\'e choisit la boucle}
+\textbf{«~chaque~», «~tous~»} $\Rightarrow$ tous les fils doivent r\'eussir $\Rightarrow$ on s'arr\^ete au \textbf{premier \'echec}.\\
+\textbf{«~existe-t-il~», «~au moins un~»} $\Rightarrow$ un seul fils suffit $\Rightarrow$ on s'arr\^ete au \textbf{premier succ\`es}.\\[2pt]
+Rappel : la condition d'un \code{while} dit quand on \textbf{continue}, pas quand on s'arr\^ete.
+\end{regle}
+
+\begin{multicols}{2}
+\textbf{\color{dfs}CHAQUE / TOUS} {\small(check\_sum, check\_max, heap\_min)}\\[2pt]
+\textbf{Version \code{while}}
+\begin{lstlisting}
+C = B.child
+while C and f(C):     # tant que le fils RÉUSSIT
+    C = C.sibling     # on continue
+return C is None      # au bout = tous OK
+\end{lstlisting}
+\textbf{Version \code{if}}
+\begin{lstlisting}
+C = B.child
+while C:
+    if not f(C):      # un fils échoue
+        return False  # tout est faux
+    C = C.sibling
+return True           # aucun échec
+\end{lstlisting}
+\columnbreak
+\textbf{\color{bfs}IL EXISTE} {\small(path\_sum, path\_increasing, leaf\_at\_depth)}\\[2pt]
+\textbf{Version \code{while}}
+\begin{lstlisting}
+C = B.child
+while C and not f(C): # tant que le fils ÉCHOUE
+    C = C.sibling     # on continue
+return C is not None  # arrêté sur un fils = trouvé
+\end{lstlisting}
+\textbf{Version \code{if}}
+\begin{lstlisting}
+C = B.child
+while C:
+    if f(C):          # un fils réussit
+        return True   # trouvé
+    C = C.sibling
+return False          # aucun succès
+\end{lstlisting}
+\end{multicols}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{l l l}
+\toprule
+ & \textbf{\color{dfs}CHAQUE} & \textbf{\color{bfs}IL EXISTE}\\
+\midrule
+Condition du \code{while} & \code{f(C)} & \code{not f(C)}\\
+\code{return} final & \code{C is None} & \code{C is not None}\\
+Version \code{if} : dans la boucle & \code{if not f(C): return False} & \code{if f(C): return True}\\
+Version \code{if} : apr\`es la boucle & \code{return True} & \code{return False}\\
+\bottomrule
+\end{tabular}\\[3pt]
+{\small Les deux sont \textbf{en miroir} : l\`a o\`u l'une met un \code{not}, l'autre l'enl\`eve, et les \code{True} / \code{False} s'\'echangent.\\
+Le \code{not} va \textbf{soit} dans le \code{while}, \textbf{soit} dans le \code{return} : jamais les deux, jamais aucun.}
+\end{center}
+
+\begin{boxok}{Faut-il une fonction auxiliaire ? \'Ecris la phrase d'abord}
+«~Vrai si \ldots{} dans le sous-arbre B, \textbf{sachant que} \ldots{}~» \quad (c'est la docstring exig\'ee)
+\begin{itemize}
+\item Pas de «~sachant que~» $\Rightarrow$ \textbf{pas d'auxiliaire} (hauteur, check\_sum, path\_sum : \code{s} est d\'ej\`a dans l'\'enonc\'e).
+\item Il manque une info \textbf{d'au-dessus} (p\`ere, profondeur, reste\ldots) $\Rightarrow$ auxiliaire avec \textbf{un param\`etre qui descend} (\code{prev}, \code{d}, \code{k}, \code{L}).
+\item Il faut \textbf{plusieurs infos d'en dessous} (nombre ET somme) $\Rightarrow$ auxiliaire qui \textbf{renvoie un tuple}.
+\item Racine sans p\`ere : lui donner un faux p\`ere qui la laisse passer (ex. \code{B.key - 1}).
+\end{itemize}
+\end{boxok}
+
 % =====================================================================
 \section*{\color{dfs}DFS 3 -- Remonter un tuple (plusieurs infos, un seul parcours)}
 
